@@ -42,9 +42,10 @@ exec zsh
 
 ```
 zaka add <name> <command>     add or replace an alias
-zaka rm <name>                remove an alias
-zaka ls [filter]              list aliases (optionally filtered)
-zaka show <name>              show what an alias maps to
+zaka fn  <name> <command>     add or replace a single-line function
+zaka rm <name>                remove an alias or function
+zaka ls [filter]              list aliases and functions (optionally filtered)
+zaka show <name>              show what an alias or function maps to
 zaka edit                     open the aliases file in $EDITOR
 zaka reload                   re-source the aliases file
 zaka file                     print the path to the aliases file
@@ -63,10 +64,38 @@ zaka add fc "flutter clean && flutter pub get"
 
 The alias activates immediately in your current shell — no `source` step, no new terminal window.
 
-### List aliases
+### Add a function
+
+For commands that need to accept arguments, use `zaka fn`:
+
+```sh
+zaka fn mycommand 'command -switch1 -switch2 $1'
+zaka fn deploy 'rsync -av $1 user@host:$2'
+zaka fn cdls 'cd $1 && ls'
+```
+
+Use single quotes to prevent the shell from expanding `$1`, `$2`, `$@` before zaka stores them:
+
+```sh
+zaka fn greet 'echo "hello, $1"'   # correct: $1 expands at call time
+zaka fn greet "echo 'hello, $1'"   # wrong: $1 expands now (probably empty)
+```
+
+Call the function like any shell command:
+
+```sh
+mycommand /some/dir
+deploy ./build /var/www
+cdls ~/projects
+```
+
+For multi-line functions, use `zaka edit` and write them directly into the aliases file.
+
+### List aliases and functions
 
 ```sh
 $ zaka ls
+cdls() { cd $1 && ls; }
 fc='flutter clean && flutter pub get'
 gp='git push origin HEAD'
 gs='git status'
@@ -77,18 +106,20 @@ gp='git push origin HEAD'
 gs='git status'
 ```
 
-### Remove an alias
+### Remove an alias or function
 
 ```sh
 $ zaka rm gp
 ✓ removed: gp
 ```
 
-### Inspect what an alias does
+Works for both aliases and functions.
+
+### Inspect what an alias or function does
 
 ```sh
-$ zaka show fc
-alias fc='flutter clean && flutter pub get'
+$ zaka show mycommand
+mycommand() { command -switch1 -switch2 $1; }
 ```
 
 ### Edit the file directly
@@ -108,23 +139,25 @@ You probably already use shell aliases. The friction is everything *around* them
 `zaka` removes the friction:
 
 - **Add aliases at the speed of thought.** `zaka add gs "git status"` is one line. No editor, no scroll, no save-and-source.
+- **Functions too, for when you need arguments.** `zaka fn deploy 'rsync -av $1 user@host:$2'` — same workflow, for the cases where a plain alias isn't enough.
 - **Aliases are data, not config.** They live in their own file (`~/.config/zaka/aliases.zsh`), separate from your shell config. Easy to back up, easy to share, easy to nuke and start over.
-- **Standard zsh `alias` underneath.** No custom syntax, no DSL. `zaka` is a thin layer that `alias`-es things and writes the file. If you uninstall `zaka` tomorrow, your aliases still work — just `source` the file directly.
-- **Zero dependencies.** A single zsh file, ~100 lines. Install via curl, uninstall by deleting one file and one line in `.zshrc`.
+- **Standard zsh `alias` and functions underneath.** No custom syntax, no DSL. `zaka` writes a plain zsh file. If you uninstall `zaka` tomorrow, your aliases and functions still work — just `source` the file directly.
+- **Zero dependencies.** A single zsh file, ~150 lines. Install via curl, uninstall by deleting one file and one line in `.zshrc`.
 
 ---
 
 ## How it works
 
-`zaka` maintains a single file at `~/.config/zaka/aliases.zsh` (overridable via `$ZAKA_FILE`). The file is just a list of `alias` statements:
+`zaka` maintains a single file at `~/.config/zaka/aliases.zsh` (overridable via `$ZAKA_FILE`). The file is plain zsh — `alias` statements and single-line functions:
 
 ```
 alias gs='git status'
 alias gp='git push origin HEAD'
 alias k='kubectl'
+mycommand() { command -switch1 -switch2 $1; }
 ```
 
-When you start a new shell, `~/.zshrc` sources `zaka.zsh`, which sources the aliases file. When you run `zaka add`, it appends a new line to the file *and* runs `alias` directly so the change is immediate.
+When you start a new shell, `~/.zshrc` sources `zaka.zsh`, which sources the aliases file. When you run `zaka add` or `zaka fn`, it appends a new line to the file *and* defines it directly in the current shell so the change is immediate.
 
 That's the whole trick. No daemon, no database, no plugin manager required.
 
@@ -136,7 +169,7 @@ That's the whole trick. No daemon, no database, no plugin manager required.
 
 **Does this work with fish?** No. Fish has its own `abbr` and `funcsave` for this purpose, which are arguably better integrated.
 
-**What if I want to add a function, not an alias?** Use `zaka edit` and add it directly. `zaka` is intentionally scoped to simple aliases — multi-line functions are easier to manage in their own file.
+**What if I want to add a multi-line function?** Use `zaka edit` and add it directly. `zaka fn` is intentionally scoped to single-line functions — anything more complex is easier to manage in an editor.
 
 **Does this conflict with Oh My Zsh's git aliases / similar plugins?** No. Plugin-defined aliases are loaded into your shell from the plugin file; `zaka`'s aliases are loaded from `~/.config/zaka/aliases.zsh`. They coexist. If you `zaka add gs "..."` and you also have OMZ's `gs` alias, the last-loaded one wins (typically yours).
 
@@ -180,7 +213,7 @@ exec zsh
 
 Issues and PRs welcome at <https://github.com/liotru-lab/zaka>.
 
-The whole project is one ~100-line file. Easy to read, easy to modify, easy to send a fix.
+The whole project is one ~150-line file. Easy to read, easy to modify, easy to send a fix.
 
 ---
 
@@ -199,4 +232,3 @@ The code, install script, and this README were drafted with assistance from [Cla
 <p align="center">
   <sub>Built by <a href="https://github.com/liotru-lab">@liotru-lab</a> · <a href="https://zaka.sh">zaka.sh</a> · co-written with <a href="https://claude.ai">Claude</a></sub>
 </p>
-

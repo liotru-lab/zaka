@@ -5,13 +5,14 @@
 #  Project:  https://zaka.sh
 #  Source:   https://github.com/liotru-lab/zaka
 #  License:  MIT
-#  Version:  0.1.0
+#  Version:  0.2.0
 #
 #  Usage:
 #    zaka add <name> <command>   Add or replace an alias
-#    zaka rm  <name>             Remove an alias
-#    zaka ls  [filter]           List aliases (optionally filtered)
-#    zaka show <name>            Show what an alias maps to
+#    zaka fn  <name> <command>   Add or replace a single-line function
+#    zaka rm  <name>             Remove an alias or function
+#    zaka ls  [filter]           List aliases and functions (optionally filtered)
+#    zaka show <name>            Show what an alias or function maps to
 #    zaka edit                   Open the aliases file in $EDITOR
 #    zaka reload                 Re-source the aliases file
 #    zaka file                   Print the path to the aliases file
@@ -28,7 +29,7 @@
 #    curl -fsSL zaka.sh/install | sh
 # ============================================================================
 
-ZAKA_VERSION="0.1.0"
+ZAKA_VERSION="0.2.0"
 ZAKA_DIR="${ZAKA_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zaka}"
 ZAKA_FILE="${ZAKA_FILE:-$ZAKA_DIR/aliases.zsh}"
 
@@ -49,18 +50,41 @@ zaka() {
         echo "usage: zaka add <name> <command>" >&2
         return 1
       fi
-      # Validate alias name (alphanumeric, dash, underscore only)
       if ! [[ "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]; then
         echo "✗ invalid alias name: '$name' (use letters, digits, _, -)" >&2
         return 1
       fi
-      # Remove any existing entry for the same name
-      sed -i.bak "/^alias ${name}=/d" "$ZAKA_FILE" && rm -f "${ZAKA_FILE}.bak"
+      # Remove any existing alias or function entry for the same name
+      sed -i.bak -E "/^(alias ${name}=|${name}\(\) \{)/d" "$ZAKA_FILE" && rm -f "${ZAKA_FILE}.bak"
       # Append the new alias
       printf "alias %s='%s'\n" "$name" "$value" >> "$ZAKA_FILE"
       # Activate immediately in the current shell
       alias "${name}=${value}"
       echo "✓ added: ${name} → ${value}"
+      ;;
+
+    fn|func)
+      # Usage: zaka fn <name> <command...>
+      # For commands that need to accept arguments — use $1, $2, $@ in the command.
+      # Wrap the command in single quotes to prevent premature variable expansion:
+      #   zaka fn mycommand 'command -switch1 -switch2 $1'
+      local name="$1"; shift 2>/dev/null
+      local body="$*"
+      if [ -z "$name" ] || [ -z "$body" ]; then
+        echo "usage: zaka fn <name> <command>" >&2
+        return 1
+      fi
+      if ! [[ "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]; then
+        echo "✗ invalid function name: '$name' (use letters, digits, _, -)" >&2
+        return 1
+      fi
+      # Remove any existing alias or function entry for the same name
+      sed -i.bak -E "/^(alias ${name}=|${name}\(\) \{)/d" "$ZAKA_FILE" && rm -f "${ZAKA_FILE}.bak"
+      # Append the new function (single-line form)
+      printf "%s() { %s; }\n" "$name" "$body" >> "$ZAKA_FILE"
+      # Activate immediately in the current shell
+      eval "${name}() { ${body}; }"
+      echo "✓ added: ${name}() { ${body}; }"
       ;;
 
     rm|remove|del|delete)
@@ -70,12 +94,13 @@ zaka() {
         echo "usage: zaka rm <name>" >&2
         return 1
       fi
-      if grep -q "^alias ${name}=" "$ZAKA_FILE"; then
-        sed -i.bak "/^alias ${name}=/d" "$ZAKA_FILE" && rm -f "${ZAKA_FILE}.bak"
+      if grep -qE "^(alias ${name}=|${name}\(\) \{)" "$ZAKA_FILE"; then
+        sed -i.bak -E "/^(alias ${name}=|${name}\(\) \{)/d" "$ZAKA_FILE" && rm -f "${ZAKA_FILE}.bak"
         unalias "$name" 2>/dev/null
+        unfunction "$name" 2>/dev/null
         echo "✓ removed: ${name}"
       else
-        echo "✗ no alias named '${name}' in ${ZAKA_FILE}" >&2
+        echo "✗ no alias or function named '${name}' in ${ZAKA_FILE}" >&2
         return 1
       fi
       ;;
@@ -83,15 +108,19 @@ zaka() {
     ls|list)
       # Usage: zaka ls [filter]
       local count
-      count=$(grep -c '^alias ' "$ZAKA_FILE" 2>/dev/null || echo 0)
+      count=$(grep -cE "^(alias |[a-zA-Z_][a-zA-Z0-9_-]*\(\) \{)" "$ZAKA_FILE" 2>/dev/null || echo 0)
       if [ "$count" -eq 0 ]; then
         echo "no aliases yet — try: zaka add gs \"git status\""
         return 0
       fi
       if [ -n "$1" ]; then
-        grep "^alias .*${1}" "$ZAKA_FILE" | sed 's/^alias //'
+        grep -E "^(alias |[a-zA-Z_][a-zA-Z0-9_-]*\(\) \{)" "$ZAKA_FILE" \
+          | grep "${1}" \
+          | sed 's/^alias //'
       else
-        sed -n 's/^alias //p' "$ZAKA_FILE" | sort
+        grep -E "^(alias |[a-zA-Z_][a-zA-Z0-9_-]*\(\) \{)" "$ZAKA_FILE" \
+          | sed 's/^alias //' \
+          | sort
       fi
       ;;
 
@@ -102,8 +131,8 @@ zaka() {
         echo "usage: zaka show <name>" >&2
         return 1
       fi
-      grep "^alias ${name}=" "$ZAKA_FILE" || {
-        echo "✗ no alias named '${name}'" >&2
+      grep -E "^(alias ${name}=|${name}\(\) \{)" "$ZAKA_FILE" || {
+        echo "✗ no alias or function named '${name}'" >&2
         return 1
       }
       ;;
@@ -119,7 +148,7 @@ zaka() {
       # Usage: zaka reload
       source "$ZAKA_FILE"
       local n
-      n=$(grep -c '^alias ' "$ZAKA_FILE")
+      n=$(grep -cE "^(alias |[a-zA-Z_][a-zA-Z0-9_-]*\(\) \{)" "$ZAKA_FILE")
       echo "✓ reloaded ${n} alias$([ "$n" = "1" ] || echo 'es')"
       ;;
 
@@ -138,9 +167,10 @@ zaka ${ZAKA_VERSION} — manage your shell aliases without editing dotfiles
 
 usage:
   zaka add <name> <command>   add or replace an alias
-  zaka rm <name>              remove an alias
-  zaka ls [filter]            list aliases (optionally filtered)
-  zaka show <name>            show what an alias maps to
+  zaka fn  <name> <command>   add or replace a single-line function
+  zaka rm <name>              remove an alias or function
+  zaka ls [filter]            list aliases and functions (optionally filtered)
+  zaka show <name>            show what an alias or function maps to
   zaka edit                   open the aliases file in \$EDITOR
   zaka reload                 re-source the aliases file
   zaka file                   print the path to the aliases file
@@ -149,9 +179,15 @@ usage:
 examples:
   zaka add gs "git status"
   zaka add gp "git push origin HEAD"
-  zaka add k kubectl
+  zaka fn mycommand 'command -switch1 -switch2 \$1'
+  zaka fn cdinto 'cd \$1 && ls'
   zaka ls git
   zaka rm gp
+
+note:
+  use single quotes with zaka fn to prevent premature variable expansion:
+    zaka fn mycommand 'command -flag \$1'   ← correct: \$1 expands at call time
+    zaka fn mycommand "command -flag \$1"   ← wrong:   \$1 expands now (probably empty)
 
 storage: ${ZAKA_FILE}
 docs:    https://zaka.sh
@@ -169,7 +205,9 @@ EOF
 if command -v fzf >/dev/null 2>&1; then
   zaka-pick() {
     local choice
-    choice=$(sed -n 's/^alias //p' "$ZAKA_FILE" | fzf --prompt="zaka › " --height=40% --reverse) || return
+    choice=$(grep -E "^(alias |[a-zA-Z_][a-zA-Z0-9_-]*\(\) \{)" "$ZAKA_FILE" \
+      | sed 's/^alias //' \
+      | fzf --prompt="zaka › " --height=40% --reverse) || return
     [ -n "$choice" ] && echo "$choice"
   }
 fi
