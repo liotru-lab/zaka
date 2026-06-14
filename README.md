@@ -25,6 +25,8 @@ curl -fsSL zaka.sh/install | sh
 
 The installer drops `zaka.zsh` into `~/.local/share/zaka/` and adds a single `source` line to your `~/.zshrc`. Reload your shell (`exec zsh`) and run `zaka help`.
 
+If [Claude Code](https://claude.com/claude-code) is detected, the installer also drops in a small [skill](#claude-code-skill) so Claude reaches for `zaka` instead of editing your dotfiles. Set `ZAKA_NO_SKILL=1` to skip it.
+
 **Manual install** if you'd rather not pipe `curl` to `sh`:
 
 ```sh
@@ -129,6 +131,26 @@ $ zaka edit
 ```
 
 Opens `~/.config/zaka/aliases.zsh` in `$EDITOR`. Save and exit — the file is automatically re-sourced.
+
+---
+
+## Claude Code skill
+
+zaka ships with a [Claude Code](https://claude.com/claude-code) skill so that when you ask Claude to "make a `gs` alias for `git status`", it runs `zaka add gs "git status"` instead of hand-editing your `~/.zshrc`. The skill is plain Markdown (`skills/zaka/SKILL.md`) — usable by any assistant that reads skill files, and harmless if you don't use one.
+
+You get it three ways:
+
+- **With the install script** — auto-installed to `~/.claude/skills/zaka/` when Claude Code is detected. Disable with `ZAKA_NO_SKILL=1`; force with `ZAKA_SKILL=1`.
+- **As a plugin** — from the `liotru-lab` Claude Code marketplace:
+
+  ```
+  /plugin marketplace add liotru-lab/plugins
+  /plugin install zaka@liotru-lab
+  ```
+
+- **Manually** — copy `skills/zaka/SKILL.md` from this repo to `~/.claude/skills/zaka/SKILL.md`.
+
+The skill only *uses* zaka; it doesn't replace it. Install the CLI (above) too.
 
 ---
 

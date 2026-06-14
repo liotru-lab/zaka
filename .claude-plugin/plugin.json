@@ -1,0 +1,10 @@
+{
+  "name": "zaka",
+  "description": "Manage zsh aliases and single-line functions without editing dotfiles. Ships a Claude skill so Claude reaches for `zaka add`/`zaka fn`/`zaka rm` instead of hand-editing ~/.zshrc. Requires the zaka CLI (curl -fsSL zaka.sh/install | sh) to be installed separately.",
+  "version": "0.2.0",
+  "author": { "name": "Luca Romano", "url": "https://github.com/liotru-lab" },
+  "homepage": "https://zaka.sh",
+  "repository": "https://github.com/liotru-lab/zaka",
+  "license": "MIT",
+  "keywords": ["zsh", "alias", "shell", "dotfiles", "productivity"]
+}

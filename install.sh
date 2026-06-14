@@ -16,6 +16,12 @@ ZAKA_INSTALL_DIR="${ZAKA_INSTALL_DIR:-$HOME/.local/share/zaka}"
 ZAKA_INSTALL_FILE="${ZAKA_INSTALL_DIR}/zaka.zsh"
 ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
+# Claude Code skill (optional). Installed when Claude Code is detected, unless
+# ZAKA_NO_SKILL=1. Set ZAKA_SKILL=1 to force-install even if not detected.
+ZAKA_SKILL_URL="${ZAKA_SKILL_URL:-https://raw.githubusercontent.com/${ZAKA_REPO}/${ZAKA_REF}/skills/zaka/SKILL.md}"
+ZAKA_SKILL_DIR="${ZAKA_SKILL_DIR:-$HOME/.claude/skills/zaka}"
+ZAKA_SKILL_FILE="${ZAKA_SKILL_DIR}/SKILL.md"
+
 # ---- Output helpers --------------------------------------------------------
 
 # ANSI colors only if stdout is a TTY
@@ -96,6 +102,26 @@ else
     printf '%s\n' "$SOURCE_LINE"
   } >> "$ZSHRC"
   ok "Added source line to $ZSHRC"
+fi
+
+# 4. Install the Claude Code skill (optional, opt-out)
+#    Lets Claude reach for `zaka add`/`fn`/`rm` instead of hand-editing dotfiles.
+#    Skipped silently when Claude Code isn't detected; never aborts the install.
+if [ "${ZAKA_NO_SKILL:-0}" = "1" ]; then
+  info "Skipping Claude Code skill (ZAKA_NO_SKILL=1)"
+elif [ "${ZAKA_SKILL:-0}" = "1" ] || command -v claude >/dev/null 2>&1 || [ -d "$HOME/.claude" ]; then
+  info "Installing Claude Code skill"
+  mkdir -p "$ZAKA_SKILL_DIR"
+  if $DOWNLOAD "$ZAKA_SKILL_URL" > "$ZAKA_SKILL_FILE.tmp" 2>/dev/null \
+     && grep -q '^name: zaka' "$ZAKA_SKILL_FILE.tmp"; then
+    mv "$ZAKA_SKILL_FILE.tmp" "$ZAKA_SKILL_FILE"
+    ok "Installed Claude Code skill to ${ZAKA_SKILL_FILE}"
+  else
+    rm -f "$ZAKA_SKILL_FILE.tmp"
+    warn "Could not install the Claude Code skill — skipped (the tool itself is fine)"
+  fi
+else
+  info "Claude Code not detected — skipping skill (set ZAKA_SKILL=1 to force)"
 fi
 
 # ---- Done ------------------------------------------------------------------
