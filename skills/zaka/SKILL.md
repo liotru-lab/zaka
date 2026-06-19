@@ -1,7 +1,7 @@
 ---
 name: zaka
 description: Use the zaka command to add, remove, list, and inspect zsh aliases and single-line functions without editing dotfiles. Trigger whenever the user wants to create a shortcut/alias for a command, save a frequently-typed command, remove or rename an existing alias, or list what aliases exist — instead of hand-editing ~/.zshrc.
-allowed-tools: Bash(zaka *) Bash(zaka-pick *)
+allowed-tools: Bash(zaka *)
 ---
 
 # zaka
@@ -45,6 +45,17 @@ Multi-line functions are out of scope; use `zaka edit` for those.
 
 ```sh
 zaka rm gp        # removes an alias or function by name
+```
+
+## Renaming
+
+There's no `zaka rename` — rename = look up the value, re-add under the new name,
+then remove the old:
+
+```sh
+zaka show gs              # see what it maps to
+zaka add gst "git status" # add under the new name
+zaka rm gs               # drop the old name
 ```
 
 ## Listing and inspecting
