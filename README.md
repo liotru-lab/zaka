@@ -152,6 +152,14 @@ You get it three ways:
 
 The skill only *uses* zaka; it doesn't replace it. Install the CLI (above) too.
 
+### Using it in any AI chat
+
+The skill works best in an on-machine agent like Claude Code, where it can actually run `zaka`. To get help *drafting* `zaka` commands from a regular AI chat (which can't touch your machine), give it the skill:
+
+> Paste the contents of **<https://zaka.sh/skill>** into the chat, then ask for the alias you want.
+
+The chat writes the `zaka add` / `zaka fn` command; you run it.
+
 ---
 
 ## Why?

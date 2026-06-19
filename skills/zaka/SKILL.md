@@ -15,6 +15,13 @@ or sourcing files by hand.
 user it installs with `curl -fsSL zaka.sh/install | sh`, and don't hand-edit
 their dotfiles as a substitute.
 
+**Assume zsh on macOS.** zaka runs in zsh (not bash/POSIX sh), and the user is on
+macOS with BSD userland — not Linux/GNU. When drafting alias or function bodies,
+prefer zsh-native parameter expansion (`${v//./_}`, `${v##*+}`, `${v:l}`) over
+shelling out, and use BSD-compatible command flags: `sed -i ''` (not GNU
+`sed -i`), and avoid `grep -P`, `readlink -f`, and GNU-only `date`/`stat`/`mktemp`
+flags. Don't assume Linux coreutils.
+
 ## Adding an alias
 
 Use `zaka add` for a plain alias (re-adding the same name replaces it):
