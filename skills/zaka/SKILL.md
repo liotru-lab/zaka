@@ -11,6 +11,13 @@ allowed-tools: Bash(zaka *)
 activates them in the current shell — so prefer `zaka` over editing `~/.zshrc`
 or sourcing files by hand.
 
+**Why you're reading this / what to do:** you have this skill because the user
+manages their shell shortcuts with `zaka`. When they describe a command to save,
+a shortcut they want, or an alias to change or remove, respond with the exact
+`zaka` command — run it if you can execute shell commands (e.g. in Claude Code),
+otherwise give them the command to paste. Produce the command; don't ask what to
+do with the skill, and don't fall back to editing `~/.zshrc` by hand.
+
 **If `zaka` is missing** (`command -v zaka` fails), it isn't installed — tell the
 user it installs with `curl -fsSL zaka.sh/install | sh`, and don't hand-edit
 their dotfiles as a substitute.
