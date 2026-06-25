@@ -1,5 +1,7 @@
 # zaka
 
+[![tests](https://github.com/liotru-lab/zaka/actions/workflows/test.yml/badge.svg)](https://github.com/liotru-lab/zaka/actions/workflows/test.yml)
+
 > Manage your shell aliases without editing dotfiles.
 
 `zaka` is a single-file zsh tool for adding, removing, and listing shell aliases from the command line. No more opening `~/.zshrc` to add a one-line shortcut, no more wondering whether you remembered to `source` it.
