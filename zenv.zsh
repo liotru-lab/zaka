@@ -5,7 +5,7 @@
 #  Project:  https://zaka.sh
 #  Source:   https://github.com/liotru-lab/zaka
 #  License:  MIT
-#  Version:  0.1.0
+#  Version:  0.3.0
 #
 #  Sibling to zaka. Where zaka manages aliases for interactive shells, zenv
 #  manages `export` environment variables. It is sourced from ~/.zshenv, so the
@@ -33,7 +33,7 @@
 #    curl -fsSL zaka.sh/install | sh
 # ============================================================================
 
-ZENV_VERSION="0.1.0"
+ZENV_VERSION="0.3.0"
 ZENV_DIR="${ZENV_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zenv}"
 ZENV_FILE="${ZENV_FILE:-$ZENV_DIR/env.zsh}"
 

@@ -5,7 +5,7 @@
 #  Project:  https://zaka.sh
 #  Source:   https://github.com/liotru-lab/zaka
 #  License:  MIT
-#  Version:  0.2.0
+#  Version:  0.3.0
 #
 #  Usage:
 #    zaka add <name> <command>   Add or replace an alias
@@ -29,7 +29,7 @@
 #    curl -fsSL zaka.sh/install | sh
 # ============================================================================
 
-ZAKA_VERSION="0.2.0"
+ZAKA_VERSION="0.3.0"
 ZAKA_DIR="${ZAKA_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zaka}"
 ZAKA_FILE="${ZAKA_FILE:-$ZAKA_DIR/aliases.zsh}"
 
