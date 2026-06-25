@@ -278,7 +278,11 @@ exec zsh
 
 Issues and PRs welcome at <https://github.com/liotru-lab/zaka>.
 
-The whole project is two small single-file zsh tools (`zaka.zsh`, `zenv.zsh`). Easy to read, easy to modify, easy to send a fix.
+The whole project is two small single-file zsh tools (`zaka.zsh`, `zenv.zsh`). Easy to read, easy to modify, easy to send a fix. Run the test suite before sending one — it's zero-dependency:
+
+```sh
+zsh test/run.zsh
+```
 
 ---
 
