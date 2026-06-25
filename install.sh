@@ -16,11 +16,17 @@ ZAKA_INSTALL_DIR="${ZAKA_INSTALL_DIR:-$HOME/.local/share/zaka}"
 ZAKA_INSTALL_FILE="${ZAKA_INSTALL_DIR}/zaka.zsh"
 ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
-# Claude Code skill (optional). Installed when Claude Code is detected, unless
-# ZAKA_NO_SKILL=1. Set ZAKA_SKILL=1 to force-install even if not detected.
-ZAKA_SKILL_URL="${ZAKA_SKILL_URL:-https://raw.githubusercontent.com/${ZAKA_REPO}/${ZAKA_REF}/skills/zaka/SKILL.md}"
-ZAKA_SKILL_DIR="${ZAKA_SKILL_DIR:-$HOME/.claude/skills/zaka}"
-ZAKA_SKILL_FILE="${ZAKA_SKILL_DIR}/SKILL.md"
+# zenv — sibling tool for environment variables. Sourced from .zshenv so the
+# vars reach interactive shells, scripts, and child processes.
+ZENV_URL="${ZENV_URL:-https://raw.githubusercontent.com/${ZAKA_REPO}/${ZAKA_REF}/zenv.zsh}"
+ZENV_INSTALL_DIR="${ZENV_INSTALL_DIR:-$HOME/.local/share/zenv}"
+ZENV_INSTALL_FILE="${ZENV_INSTALL_DIR}/zenv.zsh"
+ZSHENV="${ZDOTDIR:-$HOME}/.zshenv"
+
+# Claude Code skills (optional). Installed when Claude Code is detected, unless
+# ZAKA_NO_SKILL=1. Set ZAKA_SKILL=1 to force. One skill per tool (zaka, zenv).
+ZAKA_SKILLS_BASE="${ZAKA_SKILLS_BASE:-https://raw.githubusercontent.com/${ZAKA_REPO}/${ZAKA_REF}/skills}"
+ZAKA_SKILLS_DIR="${ZAKA_SKILLS_DIR:-$HOME/.claude/skills}"
 
 # ---- Output helpers --------------------------------------------------------
 
@@ -59,7 +65,7 @@ fi
 # ---- Banner ----------------------------------------------------------------
 
 printf '\n'
-printf '  %bzaka%b — manage your shell aliases without editing dotfiles\n' "$G" "$N"
+printf '  %bzaka%b + %bzenv%b — manage aliases & env vars without editing dotfiles\n' "$G" "$N" "$G" "$N"
 printf '  %bhttps://zaka.sh%b\n' "$D" "$N"
 printf '\n'
 
@@ -104,24 +110,63 @@ else
   ok "Added source line to $ZSHRC"
 fi
 
-# 4. Install the Claude Code skill (optional, opt-out)
-#    Lets Claude reach for `zaka add`/`fn`/`rm` instead of hand-editing dotfiles.
+# 4. Download zenv.zsh (sibling tool — environment variables)
+info "Downloading zenv.zsh"
+mkdir -p "$ZENV_INSTALL_DIR"
+if ! $DOWNLOAD "$ZENV_URL" > "$ZENV_INSTALL_FILE.tmp"; then
+  rm -f "$ZENV_INSTALL_FILE.tmp"
+  fail "Download failed from $ZENV_URL"
+fi
+
+# Sanity-check the file (must contain the function definition)
+if ! grep -q '^zenv()' "$ZENV_INSTALL_FILE.tmp"; then
+  rm -f "$ZENV_INSTALL_FILE.tmp"
+  fail "Downloaded file does not look like zenv. Aborting."
+fi
+
+mv "$ZENV_INSTALL_FILE.tmp" "$ZENV_INSTALL_FILE"
+chmod +x "$ZENV_INSTALL_FILE"
+ok "Installed to ${ZENV_INSTALL_FILE}"
+
+# 5. Add source line to .zshenv (idempotent — env vars must load for all shells)
+ZENV_SOURCE_LINE="source \"${ZENV_INSTALL_FILE}\""
+
+if [ ! -f "$ZSHENV" ]; then
+  info "Creating $ZSHENV"
+  touch "$ZSHENV"
+fi
+
+if grep -Fq "zenv/zenv.zsh" "$ZSHENV" 2>/dev/null; then
+  ok "Source line already present in $ZSHENV"
+else
+  {
+    printf '\n# zenv — https://zaka.sh\n'
+    printf '%s\n' "$ZENV_SOURCE_LINE"
+  } >> "$ZSHENV"
+  ok "Added source line to $ZSHENV"
+fi
+
+# 6. Install the Claude Code skills (optional, opt-out) — one per tool.
+#    Lets Claude reach for `zaka`/`zenv` instead of hand-editing dotfiles.
 #    Skipped silently when Claude Code isn't detected; never aborts the install.
 if [ "${ZAKA_NO_SKILL:-0}" = "1" ]; then
-  info "Skipping Claude Code skill (ZAKA_NO_SKILL=1)"
+  info "Skipping Claude Code skills (ZAKA_NO_SKILL=1)"
 elif [ "${ZAKA_SKILL:-0}" = "1" ] || command -v claude >/dev/null 2>&1 || [ -d "$HOME/.claude" ]; then
-  info "Installing Claude Code skill"
-  mkdir -p "$ZAKA_SKILL_DIR"
-  if $DOWNLOAD "$ZAKA_SKILL_URL" > "$ZAKA_SKILL_FILE.tmp" 2>/dev/null \
-     && grep -q '^name: zaka' "$ZAKA_SKILL_FILE.tmp"; then
-    mv "$ZAKA_SKILL_FILE.tmp" "$ZAKA_SKILL_FILE"
-    ok "Installed Claude Code skill to ${ZAKA_SKILL_FILE}"
-  else
-    rm -f "$ZAKA_SKILL_FILE.tmp"
-    warn "Could not install the Claude Code skill — skipped (the tool itself is fine)"
-  fi
+  for skill in zaka zenv; do
+    skill_dir="${ZAKA_SKILLS_DIR}/${skill}"
+    info "Installing Claude Code skill: ${skill}"
+    mkdir -p "$skill_dir"
+    if $DOWNLOAD "${ZAKA_SKILLS_BASE}/${skill}/SKILL.md" > "$skill_dir/SKILL.md.tmp" 2>/dev/null \
+       && grep -q "^name: ${skill}" "$skill_dir/SKILL.md.tmp"; then
+      mv "$skill_dir/SKILL.md.tmp" "$skill_dir/SKILL.md"
+      ok "Installed skill to ${skill_dir}/SKILL.md"
+    else
+      rm -f "$skill_dir/SKILL.md.tmp"
+      warn "Could not install the ${skill} skill — skipped (the tool itself is fine)"
+    fi
+  done
 else
-  info "Claude Code not detected — skipping skill (set ZAKA_SKILL=1 to force)"
+  info "Claude Code not detected — skipping skills (set ZAKA_SKILL=1 to force)"
 fi
 
 # ---- Done ------------------------------------------------------------------
@@ -133,4 +178,5 @@ printf '  Next steps:\n'
 printf '    %bexec zsh%b              %b# reload your shell%b\n' "$G" "$N" "$D" "$N"
 printf '    %bzaka help%b             %b# see what zaka can do%b\n' "$G" "$N" "$D" "$N"
 printf '    %bzaka add gs "git status"%b   %b# add your first alias%b\n' "$G" "$N" "$D" "$N"
+  printf '    %bzenv set EDITOR vim%b        %b# set an env var (reaches scripts too)%b\n' "$G" "$N" "$D" "$N"
 printf '\n'

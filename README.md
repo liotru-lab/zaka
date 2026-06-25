@@ -15,6 +15,8 @@ nothing to commit, working tree clean
 
 That's it. The alias is live in your current shell and persisted across new ones.
 
+zaka ships with **[`zenv`](#zenv--environment-variables)**, a sibling tool that manages *environment variables* the same way — sourced from `~/.zshenv`, so they reach scripts and child processes, not just interactive shells.
+
 ---
 
 ## Install
@@ -23,7 +25,7 @@ That's it. The alias is live in your current shell and persisted across new ones
 curl -fsSL zaka.sh/install | sh
 ```
 
-The installer drops `zaka.zsh` into `~/.local/share/zaka/` and adds a single `source` line to your `~/.zshrc`. Reload your shell (`exec zsh`) and run `zaka help`.
+The installer drops `zaka.zsh` into `~/.local/share/zaka/` and adds a `source` line to your `~/.zshrc`; it also installs the sibling [`zenv`](#zenv--environment-variables) into `~/.local/share/zenv/`, sourced from `~/.zshenv`. Reload your shell (`exec zsh`) and run `zaka help` / `zenv help`.
 
 If [Claude Code](https://claude.com/claude-code) is detected, the installer also drops in a small [skill](#claude-code-skill) so Claude reaches for `zaka` instead of editing your dotfiles. Set `ZAKA_NO_SKILL=1` to skip it.
 
@@ -134,6 +136,36 @@ Opens `~/.config/zaka/aliases.zsh` in `$EDITOR`. Save and exit — the file is a
 
 ---
 
+## zenv — environment variables
+
+zaka's sibling, installed alongside it. Same idea, for `export`ed environment variables instead of aliases — and because it's sourced from `~/.zshenv`, the variables reach **interactive shells, scripts, and child processes in any language** (bash, python, …), not just zsh.
+
+```
+zenv set <NAME> <value>    set or replace an environment variable
+zenv unset <NAME>          remove an environment variable
+zenv ls [filter]           list variables (optionally filtered)
+zenv get <NAME>            show what a variable is set to
+zenv edit                  open the env file in $EDITOR
+zenv reload                re-source the env file
+zenv file                  print the path to the env file
+zenv help                  show help
+```
+
+```sh
+$ zenv set GOPATH "$HOME/go"
+✓ set: GOPATH=/Users/you/go
+
+$ zenv set JAVA_OPTS "-Xmx2g"
+$ zenv ls java
+JAVA_OPTS='-Xmx2g'
+```
+
+The variable is live in your current shell and persisted for new ones. Storage is a plain file at `~/.config/zenv/env.zsh` (overridable via `$ZENV_FILE`) holding `export NAME='value'` lines.
+
+**Why a separate tool, not `zaka`?** Aliases are an interactive-shell, zsh-only construct — they don't reach scripts. Environment variables belong in `~/.zshenv` and propagate through the process environment to everything. Keeping them separate puts each tool's storage in the file zsh actually expects. Variable names follow env-var rules — letters, digits, `_`; no hyphens.
+
+---
+
 ## Claude Code skill
 
 zaka ships with a [Claude Code](https://claude.com/claude-code) skill so that when you ask Claude to "make a `gs` alias for `git status`", it runs `zaka add gs "git status"` instead of hand-editing your `~/.zshrc`. The skill is plain Markdown (`skills/zaka/SKILL.md`) — usable by any assistant that reads skill files, and harmless if you don't use one.
@@ -151,6 +183,8 @@ You get it three ways:
 - **Manually** — copy `skills/zaka/SKILL.md` from this repo to `~/.claude/skills/zaka/SKILL.md`.
 
 The skill only *uses* zaka; it doesn't replace it. Install the CLI (above) too.
+
+`zenv` ships its own skill (`skills/zenv/SKILL.md`) installed the same way — the curl installer drops both into `~/.claude/skills/`, and the plugin carries both — so Claude drives environment variables too.
 
 ### Using it in any AI chat
 
@@ -231,9 +265,10 @@ Useful for syncing aliases across machines via your dotfiles repo, or keeping pe
 ## Uninstall
 
 ```sh
-rm -rf ~/.local/share/zaka
-rm -rf ~/.config/zaka              # only if you want to delete your aliases too
+rm -rf ~/.local/share/zaka ~/.local/share/zenv
+rm -rf ~/.config/zaka ~/.config/zenv    # only if you want to delete your aliases & vars too
 sed -i.bak '/zaka\/zaka.zsh/d' ~/.zshrc
+sed -i.bak '/zenv\/zenv.zsh/d' ~/.zshenv
 exec zsh
 ```
 
@@ -243,7 +278,7 @@ exec zsh
 
 Issues and PRs welcome at <https://github.com/liotru-lab/zaka>.
 
-The whole project is one ~150-line file. Easy to read, easy to modify, easy to send a fix.
+The whole project is two small single-file zsh tools (`zaka.zsh`, `zenv.zsh`). Easy to read, easy to modify, easy to send a fix.
 
 ---
 
